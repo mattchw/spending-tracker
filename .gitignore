@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+build
+
+# secrets & local data — NEVER commit these
+.env
+.env.local
+*.pem
+data/*.db
+data/*.db-*
+.DS_Store
