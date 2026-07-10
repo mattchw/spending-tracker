@@ -116,7 +116,7 @@ to pull the latest.
 | `npm run db:generate` | Generate a new Drizzle migration from `src/lib/schema.ts` |
 | `npm run db:migrate` | Apply migrations to `DATABASE_URL` |
 | `npm run db:push` | Push schema directly (no migration file) |
-| `npm run db:migrate:data` | One-off import from a legacy `data/spending.db` (SQLite) into Postgres |
+| `npm run db:migrate:data` | One-off import from a legacy `data/spending.db` (SQLite) into Postgres. Requires a local `npm i -D better-sqlite3` first (not a project dependency). |
 
 ---
 

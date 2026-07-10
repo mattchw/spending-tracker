@@ -17,8 +17,26 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { config } from "dotenv";
-import Database from "better-sqlite3";
 import { sql } from "drizzle-orm";
+
+// `better-sqlite3` is a native module only needed by this one-off local script,
+// so it's intentionally NOT a project dependency (it broke the serverless build).
+// Install it on demand before running: `npm i -D better-sqlite3`.
+async function openSqlite(file: string) {
+  let Database: any;
+  try {
+    // Computed specifier: keeps TS from resolving this optional, uninstalled
+    // native dep at build time (it's installed on demand, see note above).
+    const mod = "better-sqlite3";
+    ({ default: Database } = await import(mod));
+  } catch {
+    throw new Error(
+      "better-sqlite3 is not installed. This migration script needs it; run " +
+        "`npm i -D better-sqlite3` first, then re-run `npm run db:migrate:data`.",
+    );
+  }
+  return new Database(file, { readonly: true, fileMustExist: true });
+}
 
 // Load secrets the same way drizzle.config.ts does, before importing anything
 // that reads DATABASE_URL / TOKEN_ENC_KEY at module load time.
@@ -34,7 +52,7 @@ async function main() {
   const { db, schema } = await import("../src/lib/db-client");
   const { encryptToken } = await import("../src/lib/crypto");
 
-  const sqlite = new Database(sqlitePath, { readonly: true, fileMustExist: true });
+  const sqlite = await openSqlite(sqlitePath);
   sqlite.pragma("journal_mode = WAL");
 
   const rows = <T>(table: string): T[] =>
