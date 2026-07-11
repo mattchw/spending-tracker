@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { Sidebar, NAV, type SessionUser } from "@/components/dashboard/sidebar";
+import { MobileNav } from "@/components/dashboard/mobile-nav";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -73,11 +74,14 @@ export function AppShell({
       <Sidebar user={user} />
       <main className="w-full min-w-0 flex-1 px-4 py-5 pb-16 sm:px-6 lg:px-10">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            {isOverview && (
-              <div className="text-muted-foreground text-sm">{greeting()}</div>
-            )}
-            <h1 className="mt-0.5 text-2xl font-bold">{title}</h1>
+          <div className="flex items-center gap-3">
+            <MobileNav user={user} />
+            <div>
+              {isOverview && (
+                <div className="text-muted-foreground text-sm">{greeting()}</div>
+              )}
+              <h1 className="mt-0.5 text-2xl font-bold">{title}</h1>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2.5">
             {showPeriod && (
