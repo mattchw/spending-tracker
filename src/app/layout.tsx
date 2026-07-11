@@ -5,7 +5,7 @@ import { DashboardProvider } from "@/components/dashboard/dashboard-context";
 import { AppShell } from "@/components/dashboard/app-shell";
 
 export const metadata: Metadata = {
-  title: "Spending Tracker",
+  title: "True Spndr",
   description: "Monthly expenditure across your UK bank accounts",
 };
 

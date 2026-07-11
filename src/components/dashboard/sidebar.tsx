@@ -41,7 +41,7 @@ export function Sidebar({ user }: { user?: SessionUser | null }) {
         <span className="grid size-8 place-items-center rounded-lg font-extrabold text-white [background:var(--grad)]">
           £
         </span>
-        Spending Tracker
+        True Spndr
       </div>
       <nav className="flex flex-col gap-0.5">
         {NAV.map(({ label, href, icon: Icon }) => {

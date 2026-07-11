@@ -18,7 +18,7 @@ function SignInCard() {
           £
         </span>
         <div>
-          <h1 className="text-xl font-bold">Spending Tracker</h1>
+          <h1 className="text-xl font-bold">True Spndr</h1>
           <p className="text-muted-foreground mt-1 text-sm">
             Sign in to see your banks, balances and spending in one place.
           </p>

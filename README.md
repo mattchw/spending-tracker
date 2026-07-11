@@ -1,11 +1,13 @@
-# 💷 Spending Tracker
+# 💷 True Spndr
+
+> Live: **https://true-spndr.vercel.app/**
 
 A private monthly-expenditure dashboard for your UK bank accounts (Lloyds,
 Barclays, HSBC, NatWest, Monzo, Starling, Revolut, …). It pulls **money in /
 money out** automatically via [TrueLayer](https://truelayer.com) (UK Open
 Banking) — no manual entry — and aggregates every account into one view.
 
-![Spending Tracker dashboard](docs/dashboard.png)
+![True Spndr dashboard](docs/dashboard.png)
 
 You sign in with Google, connect each bank once, and the app keeps your
 transactions, balances, budgets and recurring payments up to date in the
@@ -127,9 +129,10 @@ to pull the latest.
    Variables** (use a separate Neon prod database, and set `APP_BASE_URL` to
    your Vercel domain). Rotate/generate fresh secrets for production.
 3. Run `npm run db:migrate` against the production `DATABASE_URL`.
-4. Update redirect URIs to your domain:
-   - Google: `https://<domain>/api/auth/callback/google`
-   - TrueLayer: `https://<domain>/api/callback`
+4. Update redirect URIs to your domain (production uses
+   `https://true-spndr.vercel.app`):
+   - Google: `https://true-spndr.vercel.app/api/auth/callback/google`
+   - TrueLayer: `https://true-spndr.vercel.app/api/callback`
 5. Confirm your TrueLayer **live** app is approved for production Data API
    access.
 
