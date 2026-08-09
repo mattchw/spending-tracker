@@ -30,6 +30,17 @@ function dedupKey(uid: string, tx: TlTransaction): string {
   return `${uid}:${d}:${tx.amount}:${describe(tx).slice(0, 40)}`;
 }
 
+/**
+ * True when an error is a 403 raised because the bank requires fresh
+ * authentication to read this resource (TrueLayer: "SCA exemption has
+ * expired … accessed shortly after PSU Authentication"). Some banks — notably
+ * Lloyds — refuse transaction reads outside the short window right after the
+ * user logs in, even for data inside the 90-day background window.
+ */
+function isScaExpired(message: string): boolean {
+  return /sca exemption has expired|accessed shortly after/i.test(message);
+}
+
 function direction(tx: TlTransaction): "in" | "out" {
   if (tx.transaction_type === "CREDIT") return "in";
   if (tx.transaction_type === "DEBIT") return "out";
@@ -116,8 +127,15 @@ export async function syncAll(
   transactions: number;
   transfers: number;
   errors: string[];
+  needsReauth: string[];
 }> {
-  const days = opts.days ?? 90;
+  // Deep history (>90 days) is only honoured right after authentication, which
+  // is the only time a caller passes an explicit `connectionId`. Background
+  // syncs (Sync now / cron) are hard-capped at 90 days — the most banks allow
+  // via the refresh token — so we never request more than the window they'll
+  // serve without a fresh SCA.
+  const freshAuth = Boolean(opts.connectionId);
+  const days = freshAuth ? opts.days ?? 90 : Math.min(opts.days ?? 90, 90);
   const dateFrom =
     opts.from ||
     new Date(Date.now() - days * 24 * 60 * 60 * 1000)
@@ -132,6 +150,7 @@ export async function syncAll(
   let accountCount = 0;
   let transactions = 0;
   const errors: string[] = [];
+  const needsReauth = new Set<string>();
 
   for (const conn of connections) {
     let accessToken: string;
@@ -145,6 +164,14 @@ export async function syncAll(
     for (const acc of accounts) {
       accountCount++;
       const kind = acc.kind === "card" ? "card" : "account";
+
+      // Balances remain available via background access even when a strict bank
+      // gates transactions behind a fresh SCA, so refresh it first — a later
+      // transactions 403 shouldn't cost us the balance update. (getBalance
+      // swallows its own errors and returns null.)
+      const bal = await getBalance(accessToken, acc.uid, kind);
+      if (bal) await setBalance(bal.current, bal.currency, Date.now(), acc.uid);
+
       try {
         transactions += await syncAccount(
           userId,
@@ -153,10 +180,16 @@ export async function syncAll(
           dateFrom,
           dateTo,
         );
-        const bal = await getBalance(accessToken, acc.uid, kind);
-        if (bal) await setBalance(bal.current, bal.currency, Date.now(), acc.uid);
       } catch (e: any) {
-        errors.push(`${acc.bank} ${acc.name}: ${e.message}`);
+        if (isScaExpired(e.message)) {
+          // Expected for banks that only serve transactions right after login
+          // (e.g. Lloyds). That history was already captured by the deep pull on
+          // connect, so this isn't a failure — flag the bank for reconnection
+          // instead of surfacing a hard error on every background sync.
+          needsReauth.add(acc.bank || conn.provider || conn.id);
+        } else {
+          errors.push(`${acc.bank} ${acc.name}: ${e.message}`);
+        }
       }
     }
   }
@@ -166,7 +199,13 @@ export async function syncAll(
   // Flag money moved between the user's own accounts so it drops out of totals.
   const transfers = await reconcileInternalTransfers(userId);
 
-  return { accounts: accountCount, transactions, transfers, errors };
+  return {
+    accounts: accountCount,
+    transactions,
+    transfers,
+    errors,
+    needsReauth: [...needsReauth],
+  };
 }
 
 /**

@@ -98,18 +98,27 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     try {
       const res = await fetch("/api/sync", { method: "POST" });
       const j = await res.json();
-      if (j.error) setNote({ kind: "err", text: j.error });
-      else {
-        const extra = j.transfers
-          ? ` (${j.transfers} internal transfer${j.transfers === 1 ? "" : "s"} excluded)`
-          : "";
-        setNote({
-          kind: "ok",
-          text: `Synced ${j.transactions} transactions from ${j.accounts} account(s)${extra}.`,
-        });
+      if (j.error) {
+        setNote({ kind: "err", text: j.error });
+      } else {
         await load(month);
+        if (j.errors?.length) {
+          setNote({ kind: "err", text: j.errors.join("; ") });
+        } else {
+          const extra = j.transfers
+            ? ` (${j.transfers} internal transfer${j.transfers === 1 ? "" : "s"} excluded)`
+            : "";
+          // Banks that only serve transactions right after login (e.g. Lloyds)
+          // aren't an error — nudge the user to reconnect them to refresh.
+          const reauth = j.needsReauth?.length
+            ? ` Reconnect ${j.needsReauth.join(", ")} to refresh its transactions.`
+            : "";
+          setNote({
+            kind: "ok",
+            text: `Synced ${j.transactions} transactions from ${j.accounts} account(s)${extra}.${reauth}`,
+          });
+        }
       }
-      if (j.errors?.length) setNote({ kind: "err", text: j.errors.join("; ") });
     } finally {
       setBusy(false);
     }
