@@ -6,6 +6,25 @@ import { useDashboard } from "@/components/dashboard/dashboard-context";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { money } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import type { ConnectionHealth } from "@/lib/types";
+
+const connectionStatus = (c: ConnectionHealth) => {
+  if (c.status === "expired")
+    return { text: "Access expired — reconnect", className: "text-out" };
+  if (c.status === "soon")
+    return {
+      text: `Access expires in ${c.daysLeft} day${c.daysLeft === 1 ? "" : "s"}`,
+      className: "text-chart-3",
+    };
+  return {
+    text:
+      c.daysLeft != null
+        ? `Active · ${c.daysLeft} day${c.daysLeft === 1 ? "" : "s"} of access left`
+        : "Active",
+    className: "text-muted-foreground",
+  };
+};
 
 const syncedLabel = (ms: number | null) => {
   if (!ms) return "Not synced yet";
@@ -85,6 +104,57 @@ export default function AccountsPage() {
             </CardDescription>
           </div>
           <BalanceDonut slices={balanceSlices} currency={primaryCcy} />
+        </Card>
+      )}
+
+      {/* Bank connections — reconnect to renew access or refresh transactions */}
+      {(data.connections?.length ?? 0) > 0 && (
+        <Card>
+          <div>
+            <CardTitle>Bank connections</CardTitle>
+            <CardDescription className="mt-1">
+              Reconnect a bank to renew access or refresh its transactions. Some
+              banks (e.g. Lloyds, Monzo) only share new transactions right after
+              you sign in, so reconnect them when you want the latest.
+            </CardDescription>
+          </div>
+          <div>
+            {data.connections.map((c) => {
+              const status = connectionStatus(c);
+              const logo =
+                accounts.find(
+                  (a) => a.bank?.toLowerCase() === c.provider?.toLowerCase()
+                )?.logo ?? null;
+              return (
+                <div
+                  key={c.id}
+                  className="flex items-center gap-3.5 border-t py-3.5 first:border-t-0"
+                >
+                  <BankLogo
+                    logo={logo}
+                    bank={c.provider}
+                    className="size-10 rounded-full"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium">{c.provider}</div>
+                    <div className={cn("text-xs", status.className)}>
+                      {status.text}
+                    </div>
+                  </div>
+                  {banksConfigured && (
+                    <Button
+                      variant={c.status === "expired" ? "gradient" : "outline"}
+                      size="sm"
+                      onClick={connect}
+                      disabled={busy}
+                    >
+                      {busy ? "Starting…" : "Reconnect"}
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </Card>
       )}
 
